@@ -165,7 +165,7 @@ class TPUPodProject:
         command: str,
         **kwargs,
     ) -> Dict[str, str]:
-        command = f"cd {self.working_dir}; {command}"
+        command = f"cd {self.working_dir}\n{command}"
         return self.client.ssh(self.tpu_name, command, **kwargs)
     
     def scp(
@@ -198,7 +198,7 @@ class TPUPodProject:
     ) -> Dict[str, str]:
         command = textwrap.dedent(f"""\
         tmux new -d -s {window_name}
-        tmux send \\\"cd {self.working_dir}; {command}\\\" C-m
+        tmux send \\\"cd {self.working_dir}\n{command}\\\" C-m
         """).strip()
         return self.ssh(command, **kwargs)
     

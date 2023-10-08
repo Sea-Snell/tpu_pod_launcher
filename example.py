@@ -2,6 +2,7 @@ import textwrap
 from launcher import TPUPodClient, TPUPodProject
 
 SETUP_SCRIPT = """\
+cd ~/
 # install basics
 apt-get update -q \
     && DEBIAN_FRONTEND=noninteractive apt-get install -y \
