@@ -3,6 +3,7 @@ import subprocess
 import time
 import threading
 import textwrap
+import shlex
 
 def run_command(
     command: str,
@@ -54,11 +55,15 @@ class TPUPodClient:
         tpu_zone: str,
         user: Optional[str]=None,
         key_path: Optional[str]=None,
+        strict_host_key_checking: bool=False,
+        known_hosts_file: Optional[str]='/dev/null',
     ):
         self.tpu_project = tpu_project
         self.tpu_zone = tpu_zone
         self.user = user
         self.key_path = key_path
+        self.strict_host_key_checking = strict_host_key_checking
+        self.known_hosts_file = known_hosts_file
     
     def list(self, **kwargs) -> str:
         command = f"gcloud alpha compute tpus tpu-vm list --zone {self.tpu_zone} --project {self.tpu_project}"
@@ -110,8 +115,13 @@ class TPUPodClient:
             excludes = []
         hosts = self.list_ips(tpu_name)
         excludes_flags = ' '.join([f'--exclude={item}' for item in excludes])
-        keypath_str = f'\"ssh -i {self.key_path}\"' if self.key_path is not None else ''
-        commands = [f"rsync -avPI -e {keypath_str} {excludes_flags} \"{local_path}\" {host}:\"{remote_path}\"" for host in hosts]
+        strict_host_key_checking_str = "-o StrictHostKeyChecking=no" if not self.strict_host_key_checking else ""
+        known_hosts_file_str = f"-o UserKnownHostsFile={self.known_hosts_file}" if self.known_hosts_file is not None else ""
+        keypath_str = f'-i {self.key_path}' if self.key_path is not None else ''
+        ssh_command = f"\"ssh {strict_host_key_checking_str} {known_hosts_file_str} {keypath_str}\""
+        if ssh_command.strip().strip('\"') == 'ssh':
+            ssh_command = ''
+        commands = [f"rsync -avPI -e {ssh_command} {excludes_flags} \"{local_path}\" {host}:\"{remote_path}\"" for host in hosts]
         results = run_commands_parallel(commands, **kwargs)
         return {host: result for host, result in zip(hosts, results)}
 
@@ -126,7 +136,9 @@ class TPUPodClient:
         hosts = self.list_ips(tpu_name)
         keypath_str = f"-i {self.key_path}" if self.key_path is not None else ""
         recursive_str = "-r" if recursive else ""
-        commands = [f"scp {keypath_str} {recursive_str} \"{local_path}\" {host}:\"{remote_path}\"" for host in hosts]
+        strict_host_key_checking_str = "-o StrictHostKeyChecking=no" if not self.strict_host_key_checking else ""
+        known_hosts_file_str = f"-o UserKnownHostsFile={self.known_hosts_file}" if self.known_hosts_file is not None else ""
+        commands = [f"scp {strict_host_key_checking_str} {known_hosts_file_str} {keypath_str} {recursive_str} \"{local_path}\" {host}:\"{remote_path}\"" for host in hosts]
         results = run_commands_parallel(commands, **kwargs)
         return {host: result for host, result in zip(hosts, results)}
     
@@ -138,7 +150,9 @@ class TPUPodClient:
     ) -> Dict[str, str]:
         hosts = self.list_ips(tpu_name)
         keypath_str = f"-i {self.key_path}" if self.key_path is not None else ""
-        commands = [f"ssh {keypath_str} {host} \"{command}\"" for host in hosts]
+        strict_host_key_checking_str = "-o StrictHostKeyChecking=no" if not self.strict_host_key_checking else ""
+        known_hosts_file_str = f"-o UserKnownHostsFile={self.known_hosts_file}" if self.known_hosts_file is not None else ""
+        commands = [f"ssh {strict_host_key_checking_str} {known_hosts_file_str} {keypath_str} {host} {shlex.quote(command)}" for host in hosts]
         results = run_commands_parallel(commands, **kwargs)
         return {host: result for host, result in zip(hosts, results)}
 
@@ -195,9 +209,10 @@ class TPUPodProject:
         window_name: str='launch',
         **kwargs,
     ) -> Dict[str, str]:
+        inner_command = 'cd '+self.working_dir+'\n'+command
         command = textwrap.dedent(f"""\
         tmux new -d -s {window_name}
-        tmux send \\\"cd {self.working_dir}\n{command}\\\" C-m
+        tmux send {shlex.quote(inner_command)} C-m
         """).strip()
         return self.ssh(command, **kwargs)
     
