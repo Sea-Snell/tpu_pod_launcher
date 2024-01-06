@@ -1,4 +1,4 @@
-from launcher import TPUPodClient, TPUPodProject, create_cli
+from tpu_pod_launcher import TPUPodClient, TPUPodProject, create_cli
 
 SETUP_SCRIPT = """\
 cd ~/
@@ -41,7 +41,7 @@ def setup(project: TPUPodProject, verbose: bool=False):
     project.ssh(SETUP_SCRIPT, verbose=verbose)
     project.ssh('mkdir ~/.config/', verbose=verbose)
     project.ssh('mkdir ~/.config/gcloud/', verbose=verbose)
-    project.scp('/home/csnell/.config/gcloud/civic-boulder-204700-V2.json', '~/.config/gcloud/', verbose=verbose)
+    project.scp('/home/csnell/.config/gcloud/my_gcs_key.json', '~/.config/gcloud/', verbose=verbose)
 
 def check_devices(project: TPUPodProject, verbose: bool=False):
     project.ssh(CHECK_DEVICES, verbose=verbose)
@@ -52,7 +52,7 @@ def debug(project: TPUPodProject, verbose: bool=False):
 if __name__ == "__main__":
     project = TPUPodProject(
         client=TPUPodClient(
-            tpu_project='civic-boulder-204700',
+            tpu_project='my_project',
             tpu_zone='europe-west4-a',
             user='charliesnell',
             key_path='/home/csnell/.ssh/general_key',
