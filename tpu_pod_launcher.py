@@ -1,9 +1,10 @@
-from typing import List, Tuple, Optional, Dict
+from typing import List, Tuple, Optional, Dict, Callable
 import subprocess
 import time
 import threading
 import textwrap
 import shlex
+import tyro
 
 def run_command(
     command: str,
@@ -256,3 +257,50 @@ class TPUPodProject:
         kill_commands = [f"tmux kill-session -t {window_name}"] + kill_commands
         command = '; '.join(kill_commands)
         return self.ssh(command, **kwargs)
+
+def create_cli(
+    project: TPUPodProject,
+    setup: Callable[[TPUPodProject], None],
+    custom_commands: Dict[str, Callable[[TPUPodProject], None]],
+):  
+    def cli_main(
+        settings: List[str],
+        /,
+        verbose: bool=True,
+    ):  
+        def check_forever():
+            while True:
+                project.check()
+                time.sleep(1)
+        
+        def launch(load_script: str):
+            project.stop()
+            with open(load_script, 'r') as f:
+                script = f.read()
+            project.copy_launch(script, verbose=verbose)
+        
+        def custom_command_wrapper(f):
+            def wrapper(*args, **kwargs):
+                f(project, *args, verbose=verbose, **kwargs)
+            return wrapper
+        
+        commands = dict(
+            check=project.check,
+            stop=lambda: project.stop(verbose=verbose),
+            check_forever=check_forever,
+            launch=launch,
+            ssh=lambda command: project.ssh(command, verbose=verbose),
+            scp=lambda l, r: project.scp(l, r, recursive=True, verbose=verbose),
+            copy=lambda: project.copy(verbose=verbose),
+            setup=lambda: custom_command_wrapper(setup),
+        )
+        commands.update({k: custom_command_wrapper(v) for k, v in custom_commands.items()})
+
+        mode, *settings = settings
+
+        if mode in commands:
+            commands[mode](*settings)
+        else:
+            raise ValueError(f"Unknown mode: {mode}")
+    
+    tyro.cli(cli_main)

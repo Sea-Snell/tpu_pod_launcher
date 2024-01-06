@@ -1,6 +1,4 @@
-import os
-from setuptools import find_packages, setup
-
+from setuptools import setup
 
 setup(
     name='tpu_pod_launcher',
@@ -8,6 +6,7 @@ setup(
     description='Launch experiments on TPU pods in python.',
     url='https://github.com/Sea-Snell/tpu_pod_launcher/tree/main',
     author='Charlie Snell',
-    py_modules=["launcher"],
+    packages=['tyro==0.5.18'],
+    py_modules=["tpu_pod_launcher"],
     license='LICENCE',
 )
