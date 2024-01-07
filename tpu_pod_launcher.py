@@ -267,19 +267,19 @@ def create_cli(
         settings: List[str],
         /,
         verbose: bool=True,
-    ):  
+    ):
         def check_forever():
             while True:
                 project.check()
                 time.sleep(1)
         
-        def launch(load_script: str, remove_comments: bool=True):
+        def launch(load_script: str, strip_comments_key: str='#'):
             project.stop()
-            if remove_comments:
+            if strip_comments_key != '':
                 script_lines = []
                 with open(load_script, 'r') as f:
                     for line in f:
-                        if not line.startswith('#'): # remove comments
+                        if not line.strip().startswith(strip_comments_key): # remove comments
                             script_lines.append(line)
                 script = ''.join(script_lines)
             else:
