@@ -273,10 +273,18 @@ def create_cli(
                 project.check()
                 time.sleep(1)
         
-        def launch(load_script: str):
+        def launch(load_script: str, remove_comments: bool=True):
             project.stop()
-            with open(load_script, 'r') as f:
-                script = f.read()
+            if remove_comments:
+                script_lines = []
+                with open(load_script, 'r') as f:
+                    for line in f:
+                        if not line.startswith('#'): # remove comments
+                            script_lines.append(line)
+                script = ''.join(script_lines)
+            else:
+                with open(load_script, 'r') as f:
+                    script = f.read()
             project.copy_launch(script, verbose=verbose)
         
         def custom_command_wrapper(f):
@@ -292,7 +300,7 @@ def create_cli(
             ssh=lambda command: project.ssh(command, verbose=verbose),
             scp=lambda l, r: project.scp(l, r, recursive=True, verbose=verbose),
             copy=lambda: project.copy(verbose=verbose),
-            setup=lambda: custom_command_wrapper(setup),
+            setup=custom_command_wrapper(setup),
         )
         commands.update({k: custom_command_wrapper(v) for k, v in custom_commands.items()})
 
