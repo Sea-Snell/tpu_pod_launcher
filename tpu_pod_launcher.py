@@ -342,7 +342,7 @@ def create_cli(
                     for line in f:
                         if not line.strip().startswith(strip_comments_key): # remove comments
                             script_lines.append(line)
-                script = ''.join(script_lines)
+                script = ''.join(script_lines).strip()
             else:
                 with open(load_script, 'r') as f:
                     script = f.read()
