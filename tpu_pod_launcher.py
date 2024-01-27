@@ -282,15 +282,14 @@ class TPUPodProject:
                     kill_commands={self.kill_commands},
                 )""")
 
-CLI_CONFIG_PATH = os.path.join(os.path.dirname(__file__), 'config.json')
-
 def create_cli(
     projects: Dict[str, TPUPodProject],
     setup: Callable[[TPUPodProject], None],
     custom_commands: Dict[str, Callable[[TPUPodProject], None]],
+    launch_config_path: Optional[str]=None,
 ):
-    if os.path.exists(CLI_CONFIG_PATH):
-        with open(CLI_CONFIG_PATH, 'r') as f:
+    if (launch_config_path is not None) and os.path.exists(launch_config_path):
+        with open(launch_config_path, 'r') as f:
             config = json.load(f)
     else:
         config = dict()
@@ -298,7 +297,7 @@ def create_cli(
 
     def set_project(name: str):
         config['project_name'] = name
-        with open(CLI_CONFIG_PATH, 'w') as f:
+        with open(launch_config_path, 'w') as f:
             json.dump(config, f)
         print(f"Project set to: {name}")
     

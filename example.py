@@ -1,4 +1,5 @@
 from tpu_pod_launcher import TPUPodClient, TPUPodProject, create_cli
+import os
 
 SETUP_SCRIPT = """\
 cd ~/
@@ -50,6 +51,8 @@ def debug(project: TPUPodProject, verbose: bool=False):
     import IPython; IPython.embed()
 
 if __name__ == "__main__":
+    launch_config_path = os.path.join(os.path.dirname(__file__), 'launch_config.json')
+
     projects = {
         'my_project': TPUPodProject(
             client=TPUPodClient(
@@ -66,4 +69,9 @@ if __name__ == "__main__":
         )
     }
 
-    create_cli(projects, setup, {'check_devices': check_devices, 'debug': debug})
+    create_cli(
+        projects=projects,
+        setup=setup,
+        custom_commands={'check_devices': check_devices, 'debug': debug},
+        launch_config_path=launch_config_path,
+    )

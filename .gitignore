@@ -5,4 +5,3 @@ wandb/
 *.pyc
 dump.rdb
 *.egg-info/
-config.json
