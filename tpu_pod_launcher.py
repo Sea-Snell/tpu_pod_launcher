@@ -296,6 +296,8 @@ def create_cli(
     project_name = config.get('project_name', None)
 
     def set_project(name: str):
+        if launch_config_path is None:
+            raise ValueError("Cannot set project name without launch_config_path set.")
         config['project_name'] = name
         with open(launch_config_path, 'w') as f:
             json.dump(config, f)
