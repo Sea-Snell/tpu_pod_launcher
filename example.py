@@ -50,18 +50,20 @@ def debug(project: TPUPodProject, verbose: bool=False):
     import IPython; IPython.embed()
 
 if __name__ == "__main__":
-    project = TPUPodProject(
-        client=TPUPodClient(
-            tpu_project='my_project',
-            tpu_zone='europe-west4-a',
-            user='charliesnell',
-            key_path='/home/csnell/.ssh/general_key',
-        ),
-        tpu_name='your-node-id',
-        copy_dirs=[('/home/csnell/llama_train/', '~/llama_train')],
-        working_dir='~/llama_train',
-        copy_excludes=['.git', '__pycache__'],
-        kill_commands=['pkill -9 python'],
-    )
+    projects = {
+        'my_project': TPUPodProject(
+            client=TPUPodClient(
+                tpu_project='my_project',
+                tpu_zone='europe-west4-a',
+                user='charliesnell',
+                key_path='/home/csnell/.ssh/general_key',
+            ),
+            tpu_name='your-node-id',
+            copy_dirs=[('/home/csnell/llama_train/', '~/llama_train')],
+            working_dir='~/llama_train',
+            copy_excludes=['.git', '__pycache__'],
+            kill_commands=['pkill -9 python'],
+        )
+    }
 
-    create_cli(project, setup, {'check_devices': check_devices, 'debug': debug})
+    create_cli(projects, setup, {'check_devices': check_devices, 'debug': debug})
