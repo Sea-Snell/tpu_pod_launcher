@@ -5,6 +5,8 @@ import threading
 import textwrap
 import shlex
 import tyro
+import os
+import json
 
 def run_command(
     command: str,
@@ -156,6 +158,17 @@ class TPUPodClient:
         commands = [f"ssh {strict_host_key_checking_str} {known_hosts_file_str} {keypath_str} {host} {shlex.quote(command)}" for host in hosts]
         results = run_commands_parallel(commands, **kwargs)
         return {host: result for host, result in zip(hosts, results)}
+    
+    def __str__(self) -> str:
+        return textwrap.dedent(f"""\
+                TPUPodClient(
+                    tpu_project={self.tpu_project},
+                    tpu_zone={self.tpu_zone},
+                    user={self.user},
+                    key_path={self.key_path},
+                    strict_host_key_checking={self.strict_host_key_checking},
+                    known_hosts_file={self.known_hosts_file},
+                )""")
 
 class TPUPodProject:
     def __init__(
@@ -257,17 +270,65 @@ class TPUPodProject:
         kill_commands = [f"tmux kill-session -t {window_name}"] + kill_commands
         command = '; '.join(kill_commands)
         return self.ssh(command, **kwargs)
+    
+    def __str__(self) -> str:
+        return textwrap.dedent(f"""\
+                TPUPodProject(
+                    client={textwrap.indent(str(self.client), ' '*4*5).strip()},
+                    tpu_name={self.tpu_name},
+                    copy_dirs={self.copy_dirs},
+                    working_dir={self.working_dir},
+                    copy_excludes={self.copy_excludes},
+                    kill_commands={self.kill_commands},
+                )""")
+
+CLI_CONFIG_PATH = os.path.join(os.path.dirname(__file__), 'config.json')
 
 def create_cli(
-    project: TPUPodProject,
+    projects: Dict[str, TPUPodProject],
     setup: Callable[[TPUPodProject], None],
     custom_commands: Dict[str, Callable[[TPUPodProject], None]],
-):  
+):
+    if os.path.exists(CLI_CONFIG_PATH):
+        with open(CLI_CONFIG_PATH, 'r') as f:
+            config = json.load(f)
+    else:
+        config = dict()
+    project_name = config.get('project_name', None)
+
+    def set_project(name: str):
+        config['project_name'] = name
+        with open(CLI_CONFIG_PATH, 'w') as f:
+            json.dump(config, f)
+        print(f"Project set to: {name}")
+    
+    def list_projects():
+        for name in projects:
+            print(f"\033[92m{name}\033[0m={projects[name]}")
+            print()
+    
+    no_project_commands = dict(
+        set_project=set_project,
+        list_projects=list_projects,
+    )
+
     def cli_main(
         settings: List[str],
         /,
+        project: Optional[str]=project_name,
         verbose: bool=True,
     ):
+        project_name: Optional[str] = project
+        project: Optional[TPUPodProject] = projects.get(project_name, None)
+        if project is None:
+            mode, *settings = settings
+            if mode in no_project_commands:
+                no_project_commands[mode](*settings)
+                return
+            else:
+                raise ValueError(f"Unknown project: {project_name}")
+        print('Using project:', project_name)
+        
         def check_forever():
             while True:
                 project.check()
@@ -301,6 +362,7 @@ def create_cli(
             scp=lambda l, r: project.scp(l, r, recursive=True, verbose=verbose),
             copy=lambda: project.copy(verbose=verbose),
             setup=custom_command_wrapper(setup),
+            **no_project_commands,
         )
         commands.update({k: custom_command_wrapper(v) for k, v in custom_commands.items()})
 
