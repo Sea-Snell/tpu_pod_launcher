@@ -226,7 +226,7 @@ class TPUPodProject:
         inner_command = 'cd '+self.working_dir+'\n'+command
         command = textwrap.dedent(f"""\
         tmux new -d -s {window_name}
-        tmux send {shlex.quote(inner_command)} C-m
+        tmux send-keys -t {window_name} {shlex.quote(inner_command)} C-m
         """).strip()
         return self.ssh(command, **kwargs)
     
