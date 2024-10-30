@@ -6,7 +6,7 @@ setup(
     description='Launch experiments on TPU pods in python.',
     url='https://github.com/Sea-Snell/tpu_pod_launcher/tree/main',
     author='Charlie Snell',
-    install_requires=['tyro'],
+    install_requires=['tyro==0.8.11'],
     py_modules=["tpu_pod_launcher"],
     license='LICENCE',
 )
